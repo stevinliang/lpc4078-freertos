@@ -1,0 +1,10 @@
+*.o
+*.d
+*.map
+*.elf
+*.hex
+*.bin
+*.S
+*.rej
+*.swp
+tags
