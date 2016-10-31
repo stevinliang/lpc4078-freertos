@@ -4,7 +4,7 @@
  *
  * Memory Spaces Definitions.
  *
- * Need modifying for a specific board. 
+ * Need modifying for a specific board.
  *   FLASH.ORIGIN: starting address of flash
  *   FLASH.LENGTH: length of flash
  *   RAM.ORIGIN: starting address of RAM bank 0
@@ -14,6 +14,10 @@
  * using functions like 'ORIGIN(RAM)' or 'LENGTH(RAM)'.
  */
 
+/*
+ * These memory spaces definitions are for NXP LPC40xx serial
+ * MCUs.
+ */
 MEMORY
 {
   FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 512K
