@@ -528,6 +528,7 @@ void Board_SSP_Init(LPC_SSP_T *pSSP)
 void Board_Init(void)
 {
 	/* Sets up DEBUG UART */
+	retarget_init();
 	DEBUGINIT();
 
 	/* Initializes GPIO */
@@ -773,25 +774,25 @@ void Board_CAN_Init(LPC_CAN_T *pCAN)
 
 /* Baseboard joystick buttons */
 #define NUM_BUTTONS 5
-static const uint8_t portButton[NUM_BUTTONS] = { 
-	JOYSTICK_UP_GPIO_PORT_NUM, 
-	JOYSTICK_DOWN_GPIO_PORT_NUM, 
-	JOYSTICK_LEFT_GPIO_PORT_NUM, 
-	JOYSTICK_RIGHT_GPIO_PORT_NUM, 
+static const uint8_t portButton[NUM_BUTTONS] = {
+	JOYSTICK_UP_GPIO_PORT_NUM,
+	JOYSTICK_DOWN_GPIO_PORT_NUM,
+	JOYSTICK_LEFT_GPIO_PORT_NUM,
+	JOYSTICK_RIGHT_GPIO_PORT_NUM,
 	JOYSTICK_PRESS_GPIO_PORT_NUM
 };
 static const uint8_t pinButton[NUM_BUTTONS] = {
-	JOYSTICK_UP_GPIO_BIT_NUM, 
-	JOYSTICK_DOWN_GPIO_BIT_NUM, 
-	JOYSTICK_LEFT_GPIO_BIT_NUM, 
-	JOYSTICK_RIGHT_GPIO_BIT_NUM, 
+	JOYSTICK_UP_GPIO_BIT_NUM,
+	JOYSTICK_DOWN_GPIO_BIT_NUM,
+	JOYSTICK_LEFT_GPIO_BIT_NUM,
+	JOYSTICK_RIGHT_GPIO_BIT_NUM,
 	JOYSTICK_PRESS_GPIO_BIT_NUM
 };
 static const uint8_t stateButton[NUM_BUTTONS] = {
-	JOY_UP, 
-	JOY_DOWN, 
+	JOY_UP,
+	JOY_DOWN,
 	JOY_LEFT,
-	JOY_RIGHT, 
+	JOY_RIGHT,
 	JOY_PRESS
 };
 
@@ -891,21 +892,21 @@ void Board_USBD_Init(uint32_t port)
 {
 	/* On the EA LPC40xx board leave VBUS at default setting. It's not connected on the board. */
 	/* Chip_IOCON_PinMux(LPC_IOCON, 1, 30, IOCON_MODE_INACT, IOCON_FUNC2); */ /* USB VBUS */
-	
+
 	if (port == 1) {
 		Chip_IOCON_PinMux(LPC_IOCON, 0, 29, IOCON_MODE_INACT, IOCON_FUNC1);	/* P0.29 D1+, P0.30 D1- */
 		Chip_IOCON_PinMux(LPC_IOCON, 0, 30, IOCON_MODE_INACT, IOCON_FUNC1);
 		LPC_USB->USBClkCtrl = 0x12;                /* Dev, AHB clock enable */
-		while ((LPC_USB->USBClkSt & 0x12) != 0x12); 
+		while ((LPC_USB->USBClkSt & 0x12) != 0x12);
 	} else {
 		Chip_IOCON_PinMux(LPC_IOCON, 0, 31, IOCON_MODE_INACT, IOCON_FUNC1);	/* P0.31 D2+, D2- */
 		Chip_IOCON_PinMux(LPC_IOCON, 0, 14, IOCON_MODE_INACT, IOCON_FUNC3);
 		Chip_IOCON_PinMux(LPC_IOCON, 0, 13, IOCON_MODE_INACT, IOCON_FUNC1);
-		
+
 		LPC_USB->USBClkCtrl = 0x1A;                /* Dev, AHB clock enable */
-		while ((LPC_USB->USBClkSt & 0x1A) != 0x1A); 
+		while ((LPC_USB->USBClkSt & 0x1A) != 0x1A);
 		/* Port Select register when USB device is configured. */
-		LPC_USB->StCtrl = 0x3; 
+		LPC_USB->StCtrl = 0x3;
 	}
 
 }
