@@ -30,6 +30,7 @@
  */
 
 #include "board.h"
+#include "board_api.h"
 #include "string.h"
 
 #include "retarget.h"
