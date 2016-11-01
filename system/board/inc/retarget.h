@@ -41,8 +41,11 @@
  * copyright, permission, and disclaimer notice must appear in all copies of
  * this code.
  */
-
+#ifndef _RETARGET_H
+#define _RETARGET_H
 #include "board.h"
+
+void retarget_init(void);
 
 /* Keil (Realview) support */
 #if defined(__CC_ARM)
@@ -209,8 +212,8 @@ _STD_END
 	#define READFUNC __sys_readc
 #else
 /* We are using original Redlib semihosting interface */
-	#define WRITEFUNC __write
-	#define READFUNC __readc
+	#define WRITEFUNC _write
+	#define READFUNC _readc
 #endif
 
 #if defined(DEBUG_ENABLE)
@@ -220,32 +223,14 @@ _STD_END
 #endif /* defined(DEBUG_ENABLE) */
 
 #if !defined(DEBUG_SEMIHOSTING)
-int WRITEFUNC(int iFileHandle, char *pcBuffer, int iLength)
-{
-#if defined(DEBUG_ENABLE)
-	unsigned int i;
-	for (i = 0; i < iLength; i++) {
-		Board_UARTPutChar(pcBuffer[i]);
-	}
-#endif
-
-	return iLength;
-}
+int WRITEFUNC(int iFileHandle, char *pcBuffer, int iLength);
 
 /* Called by bottom level of scanf routine within RedLib C library to read
    a character. With the default semihosting stub, this would read the character
    from the debugger console window (which acts as stdin). But this version reads
    the character from the LPC1768/RDB1768 UART. */
-int READFUNC(void)
-{
-#if defined(DEBUG_ENABLE)
-	char c = Board_UARTGetChar();
-	return (int) c;
-
-#else
-	return (int) -1;
-#endif
-}
+int READFUNC(void);
 
 #endif /* !defined(DEBUG_SEMIHOSTING) */
 #endif /* defined ( __GNUC__ ) */
+#endif /* define _RETARGET_H */
