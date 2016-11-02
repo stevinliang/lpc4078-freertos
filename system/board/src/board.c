@@ -32,7 +32,6 @@
 #include "board.h"
 #include "board_api.h"
 #include "string.h"
-
 #include "retarget.h"
 
 /*****************************************************************************
@@ -530,7 +529,6 @@ void Board_Init(void)
 {
 	/* Sets up DEBUG UART */
 	retarget_init();
-	DEBUGINIT();
 
 	/* Initializes GPIO */
 	Chip_GPIO_Init(LPC_GPIO);
