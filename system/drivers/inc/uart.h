@@ -34,8 +34,8 @@ struct uart_device {
 	const PINMUX_GRP_T *pinctrls;
 	SemaphoreHandle_t send_mutex;
 	SemaphoreHandle_t recv_mutex;
-	QueueHandle_t send_queue;
-	QueueHandle_t recv_queue;
+	QueueHandle_t tx_queue;
+	QueueHandle_t rx_queue;
 	LPC_USART_T *reg_base;
 	IRQn_Type irq;
 	uint32_t irq_prior;

@@ -126,7 +126,7 @@ static void uart_set_line_control(struct uart_device *dev,
  * uart_rx_int_handler -- uart rx irq handler
  * @dev: uart device which has data available and trigger irq.
  *        This function will be called when uart device irq happened.
- *        This function will move received data to @dev->recv_queue.
+ *        This function will move received data to @dev->rx_queue.
  */
 static void uart_rx_int_handler(struct uart_device *dev)
 {
@@ -134,7 +134,7 @@ static void uart_rx_int_handler(struct uart_device *dev)
 
 	while(Chip_UART_ReadLineStatus(dev->reg_base) & UART_LSR_RDR) {
 		uint8_t ch = Chip_UART_ReadByte(dev->reg_base);
-		if (xQueueSendFromISR(dev->recv_queue, &ch,
+		if (xQueueSendFromISR(dev->rx_queue, &ch,
 					&xHigherProrityTaskWoken) == pdFALSE)
 			break;
 	}
@@ -148,7 +148,7 @@ static void uart_rx_int_handler(struct uart_device *dev)
  * uart_tx_int_handler -- uart tx irq handler
  * @dev: uart device to send data.
  *        This function will be called when uart device irq happened.
- *        This function will send data from @dev->send_queue.
+ *        This function will send data from @dev->tx_queue.
  */
 static void uart_tx_int_handler(struct uart_device *dev)
 {
@@ -156,7 +156,7 @@ static void uart_tx_int_handler(struct uart_device *dev)
 	uint8_t ch;
 
 	while((Chip_UART_ReadLineStatus(dev->reg_base) & UART_LSR_THRE) != 0 &&
-			xQueueReceiveFromISR(dev->send_queue, &ch,
+			xQueueReceiveFromISR(dev->tx_queue, &ch,
 				&xTaskWokenByReceive) == pdTRUE) {
 		Chip_UART_SendByte(dev->reg_base, ch);
 	}
@@ -182,7 +182,7 @@ static void uart_irq_handler(struct uart_device *dev)
 {
 	if (dev->reg_base->IER & UART_IER_THREINT) {
 		uart_tx_int_handler(dev);
-		if (xQueueIsQueueEmptyFromISR(dev->send_queue) == pdTRUE) {
+		if (xQueueIsQueueEmptyFromISR(dev->tx_queue) == pdTRUE) {
 			Chip_UART_IntDisable(dev->reg_base, UART_IER_THREINT);
 		}
 	}
@@ -204,11 +204,11 @@ static void uart_init(struct uart_device *dev)
 
 	dev->send_mutex = xSemaphoreCreateMutex();
 	dev->recv_mutex = xSemaphoreCreateMutex();
-	dev->send_queue = xQueueCreate(UART_SEND_BUFFER_LEN, sizeof(uint8_t));
-	dev->recv_queue = xQueueCreate(UART_RECV_BUFFER_LEN, sizeof(uint8_t));
+	dev->tx_queue = xQueueCreate(UART_SEND_BUFFER_LEN, sizeof(uint8_t));
+	dev->rx_queue = xQueueCreate(UART_RECV_BUFFER_LEN, sizeof(uint8_t));
 
 	if (dev->send_mutex && dev->recv_mutex &&
-			dev->send_queue && dev->recv_queue) {
+			dev->tx_queue && dev->rx_queue) {
 		/* Setup pins for dev */
 		uart_set_pinctrls(dev);
 		/* Default init uart controller */
@@ -236,8 +236,8 @@ static void uart_deinit(struct uart_device *dev)
 
 	vSemaphoreDelete(dev->send_mutex);
 	vSemaphoreDelete(dev->recv_mutex);
-	vQueueDelete(dev->send_queue);
-	vQueueDelete(dev->recv_queue);
+	vQueueDelete(dev->tx_queue);
+	vQueueDelete(dev->rx_queue);
 	Chip_UART_DeInit(dev->reg_base);
 	dev->initialized = false;
 }
@@ -273,7 +273,7 @@ static int uart_dev_index(struct uart_device *dev)
 }
 
 /**
- * uart_dev_tx_queued -- send queued data in dev->send_queue
+ * uart_dev_tx_queued -- send queued data in dev->tx_queue
  * @dev: uart device.
  */
 static void uart_dev_tx_queued(struct uart_device *dev)
@@ -281,7 +281,7 @@ static void uart_dev_tx_queued(struct uart_device *dev)
 	uint8_t ch;
 
 	while((Chip_UART_ReadLineStatus(dev->reg_base) & UART_LSR_THRE) != 0 &&
-			xQueueReceive(dev->send_queue, (void *)&ch, 0)) {
+			xQueueReceive(dev->tx_queue, (void *)&ch, 0)) {
 		Chip_UART_SendByte(dev->reg_base, ch);
 	}
 }
@@ -306,22 +306,22 @@ int32_t uart_send(struct uart_device *dev, uint8_t *buf, int32_t len)
 		 */
 		Chip_UART_IntDisable(dev->reg_base, UART_IER_THREINT);
 
-		/* Send as much data as possible to the send_queue of the
+		/* Send as much data as possible to the tx_queue of the
 		 * device
 		 */
 		while (i < len &&
-			xQueueSend(dev->send_queue, &buf[i],
+			xQueueSend(dev->tx_queue, &buf[i],
 				(TickType_t) 0) == pdTRUE)
 			i++;
 
 		/* Move as much data as possible to uart fifo */
 		uart_dev_tx_queued(dev);
 
-		/* Send remained data as much as possible to the send_queue
+		/* Send remained data as much as possible to the tx_queue
 		 * of the uart device.
 		 */
 		while (i < len &&
-			xQueueSend(dev->send_queue, &buf[i],
+			xQueueSend(dev->tx_queue, &buf[i],
 				(TickType_t) 0) == pdTRUE)
 			i++;
 
@@ -350,7 +350,7 @@ int32_t uart_recv(struct uart_device *dev, uint8_t *buf, int32_t len)
 
 	if (xSemaphoreTake(dev->recv_mutex, portMAX_DELAY) == pdTRUE) {
 		while(i < len &&
-			xQueueReceive(dev->recv_queue, &buf[i],
+			xQueueReceive(dev->rx_queue, &buf[i],
 				(TickType_t) 0) == pdTRUE)
 			i++;
 		xSemaphoreGive(dev->recv_mutex);
@@ -419,6 +419,7 @@ struct uart_device uart0 = {
 	.pinctrls = &uart0_pinctrls,
 	.pins = sizeof(uart0_pinctrls) / sizeof(uart0_pinctrls[0]),
 	.irq = UART0_IRQn,
+	/* irq_prior must be equal or higher than this */
 	.irq_prior = configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY,
 };
 
