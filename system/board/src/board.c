@@ -527,7 +527,7 @@ void Board_SSP_Init(LPC_SSP_T *pSSP)
    board hardware */
 void Board_Init(void)
 {
-	/* Sets up DEBUG UART */
+	/* Sets up retarget */
 	retarget_init();
 
 	/* Initializes GPIO */

@@ -8,3 +8,8 @@
 *.rej
 *.swp
 tags
+*.patch
+.cproject
+.project
+.settings
+*.launch
