@@ -8,6 +8,7 @@
 #define _UART_H_
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "queue.h"
 #include "chip.h"
 
 #define ONE_STOP_BIT   1
@@ -29,11 +30,15 @@ struct uart_device {
 	uint8_t word_length;
 	uint8_t stop_bits;
 	uint8_t parity;
+	uint8_t pins;
+	const PINMUX_GRP_T *pinctrls;
 	SemaphoreHandle_t send_mutex;
 	SemaphoreHandle_t recv_mutex;
+	QueueHandle_t send_queue;
+	QueueHandle_t recv_queue;
 	LPC_USART_T *reg_base;
-	const PINMUX_GRP_T *pinctrls;
-	uint8_t pins;
+	IRQn_Type irq;
+	uint32_t irq_prior;
 	bool initialized;
 };
 
