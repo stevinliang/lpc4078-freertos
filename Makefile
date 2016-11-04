@@ -2,7 +2,7 @@
 # Author: Stevin Liang <liangzl@yutong.com>
 #         This Makefile is for lpc40xx with freertos 9.0.
 ########################################################################
-TARGET := lpc4078_freertos
+TARGET := lpc4078-freertos
 TARGET_ELF := $(TARGET).elf
 TARGET_HEX := $(TARGET).hex
 TARGET_MAP := $(TARGET).map
