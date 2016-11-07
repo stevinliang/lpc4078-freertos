@@ -113,13 +113,12 @@ static void uart_set_line_control(struct uart_device *dev,
 	}
 
 	Chip_UART_ConfigData(dev->reg_base, line_ctl);
-	Chip_UART_SetupFIFOS(dev->reg_base, (UART_FCR_FIFO_EN | UART_FCR_TRG_LEV2));
-	Chip_UART_TXEnable(dev->reg_base);
 	Chip_UART_SetupFIFOS(dev->reg_base, (UART_FCR_FIFO_EN | UART_FCR_RX_RS |
 				UART_FCR_TX_RS | UART_FCR_TRG_LEV3));
 	Chip_UART_IntEnable(dev->reg_base, UART_IER_RBRINT | UART_IER_RLSINT);
 	NVIC_SetPriority(dev->irq, dev->irq_prior);
 	NVIC_EnableIRQ(dev->irq);
+	Chip_UART_TXEnable(dev->reg_base);
 }
 
 /**
@@ -291,13 +290,16 @@ static void uart_dev_tx_queued(struct uart_device *dev)
  * @dev: uart device used to send.
  * @buf: the data will be sent.
  * @len: length of data will be sent.
- *      return length of bytes be sent. The return value may be equal
- *      or less than  @len. So the program should check how many bytes
- *      sent successfully by calling this function.
+ *      return length of bytes be sent or -1 if dev is not initialized.
+ *      The return value may be equal or less than  @len. So the program
+ *      should check how many bytes sent successfully by calling this function.
  */
 int32_t uart_send(struct uart_device *dev, uint8_t *buf, int32_t len)
 {
 	int i = 0;
+
+	if (!dev->initialized)
+		return -1;
 
 	if (xSemaphoreTake(dev->send_mutex, portMAX_DELAY) == pdTRUE) {
 		/* Disable Uart interrupt before moving date into queue */
@@ -340,13 +342,17 @@ int32_t uart_send(struct uart_device *dev, uint8_t *buf, int32_t len)
  * @dev: uart device used to receive data.
  * @buf: the data received will be store here.
  * @len: number of bytes want to receive.
- *      return length of bytes be received.
+ *      return length of bytes be received or -1 if dev is not
+ *      initialized.
  *      The returned value may be equal or less than @len.
  *      So the program call this function should check return value.
  */
 int32_t uart_recv(struct uart_device *dev, uint8_t *buf, int32_t len)
 {
 	int i = 0;
+
+	if (!dev->initialized)
+		return -1;
 
 	if (xSemaphoreTake(dev->recv_mutex, portMAX_DELAY) == pdTRUE) {
 		while(i < len &&
@@ -413,8 +419,6 @@ struct uart_device uart0 = {
 	.word_length = WORD_LENGTH_8BITS,
 	.stop_bits = ONE_STOP_BIT,
 	.parity = PARITY_DISABLE,
-	.send_mutex = NULL,
-	.recv_mutex = NULL,
 	.reg_base = LPC_UART0,
 	.pinctrls = &uart0_pinctrls,
 	.pins = sizeof(uart0_pinctrls) / sizeof(uart0_pinctrls[0]),
