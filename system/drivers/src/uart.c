@@ -11,6 +11,7 @@
 
 #include "uart.h"
 #include "task.h"
+#include "base.h"
 #define UART_PORT_NUM 5
 #define UART_RECV_BUFFER_LEN  256
 #define UART_SEND_BUFFER_LEN  128
@@ -418,7 +419,7 @@ struct uart_device uart0 = {
 	.parity = PARITY_DISABLE,
 	.reg_base = LPC_UART0,
 	.pinctrls = &uart0_pinctrls,
-	.pins = sizeof(uart0_pinctrls) / sizeof(uart0_pinctrls[0]),
+	.pins = ARRAY_SIZE(uart0_pinctrls),
 	.irq = UART0_IRQn,
 	/* irq_prior must be equal or higher than this */
 	.irq_prior = configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY,
