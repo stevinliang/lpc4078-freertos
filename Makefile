@@ -35,7 +35,8 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 OBJDUMP = $(CROSS_COMPILE)objdump
 
 # Include directories
-INCLUDES := -I ./system/board/inc \
+INCLUDES := -I ./system/base/inc \
+	    -I ./system/board/inc \
 	    -I ./system/chip/inc \
 	    -I ./system/drivers/inc \
 	    -I ./system/freertos/inc \
