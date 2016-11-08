@@ -51,4 +51,4 @@ void uart_init_all(void);
 
 extern struct uart_device uart0;
 
-#endif /* _UART_H_ */
+#endif /* ifndef _UART_H_ */

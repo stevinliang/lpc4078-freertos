@@ -9,11 +9,8 @@
  *	Nov 3, 2016: interrupt mechanism implementation.
  **/
 
-#include "board_api.h"
 #include "uart.h"
 #include "task.h"
-#include "board.h"
-
 #define UART_PORT_NUM 5
 #define UART_RECV_BUFFER_LEN  256
 #define UART_SEND_BUFFER_LEN  128
