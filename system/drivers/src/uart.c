@@ -116,9 +116,18 @@ static void uart_set_line_control(struct uart_device *dev,
 	Chip_UART_IntEnable(dev->reg_base, UART_IER_RBRINT | UART_IER_RLSINT);
 	NVIC_SetPriority(dev->irq, dev->irq_prior);
 	NVIC_EnableIRQ(dev->irq);
+}
+
+static void uart_dev_enable(struct uart_device *dev)
+{
+
 	Chip_UART_TXEnable(dev->reg_base);
 }
 
+static void uart_dev_disable(struct uart_device *dev)
+{
+	Chip_UART_TXDisable(dev->reg_base);
+}
 /**
  * uart_rx_int_handler -- uart rx irq handler
  * @dev: uart device which has data available and trigger irq.
@@ -189,12 +198,12 @@ static void uart_irq_handler(struct uart_device *dev)
 }
 
 /**
- * uart_init -- initialize uart device interface
+ * uart_dev_init -- initialize uart device interface
  * @dev: uart device will be initialized.
  *       Each uart device must be initialized before using.
  *       This function will be called in uart_device_register().
  */
-static void uart_init(struct uart_device *dev)
+static void uart_dev_init(struct uart_device *dev)
 {
 	if (dev->initialized)
 		return;
@@ -218,25 +227,6 @@ static void uart_init(struct uart_device *dev)
 
 		dev->initialized = true;
 	}
-}
-
-/**
- * uart_deinit -- deinitialize uart device interface
- * @dev: uart device will be deinitialized.
- *       Each uart device must be initialized if it won't be used again.
- *       This function will be called in uart_device_unregister().
- */
-static void uart_deinit(struct uart_device *dev)
-{
-	if (!dev->initialized)
-		return;
-
-	vSemaphoreDelete(dev->send_mutex);
-	vSemaphoreDelete(dev->recv_mutex);
-	vQueueDelete(dev->tx_queue);
-	vQueueDelete(dev->rx_queue);
-	Chip_UART_DeInit(dev->reg_base);
-	dev->initialized = false;
 }
 
 /**
@@ -292,7 +282,7 @@ static void uart_dev_tx_queued(struct uart_device *dev)
  *      The return value may be equal or less than  @len. So the program
  *      should check how many bytes sent successfully by calling this function.
  */
-int32_t uart_send(struct uart_device *dev, uint8_t *buf, int32_t len)
+static int32_t uart_send(struct uart_device *dev, const uint8_t *buf, int32_t len)
 {
 	int i = 0;
 
@@ -345,7 +335,7 @@ int32_t uart_send(struct uart_device *dev, uint8_t *buf, int32_t len)
  *      The returned value may be equal or less than @len.
  *      So the program call this function should check return value.
  */
-int32_t uart_recv(struct uart_device *dev, uint8_t *buf, int32_t len)
+static int32_t uart_recv(struct uart_device *dev, uint8_t *buf, int32_t len)
 {
 	int i = 0;
 
@@ -369,9 +359,9 @@ int32_t uart_recv(struct uart_device *dev, uint8_t *buf, int32_t len)
  *      This function will register a uart device into system
  *      and initialize its hardware.
  */
-int uart_device_register(struct uart_device *dev)
+int uart_device_register(struct uart_device *uart_dev)
 {
-	int index = uart_dev_index(dev);
+	int index = uart_dev_index(uart_dev);
 
 	if (index < 0)
 		return -1;
@@ -379,32 +369,69 @@ int uart_device_register(struct uart_device *dev)
 	if (uart_devices[index])
 		return -1;
 
-	uart_devices[index] = dev;
+	uart_devices[index] = uart_dev;
 
-	uart_init(dev);
+	uart_dev->dev.pri_data = uart_dev;
+
+	return register_device(&uart_dev->dev);;
+}
+
+static int uart_init(struct device *dev)
+{
+	struct uart_device *uart_dev = dev->pri_data;
+
+	uart_dev_init(uart_dev);
 
 	return 0;
 }
 
-/**
- * uart_device_unregister -- unregister a uart device from system
- * @dev: uart device will be unregistered.
- *      This function will unregister a uart device from system
- *      and deinitialize its hardware.
- */
-void uart_device_unregister(struct uart_device *dev)
+static int uart_open(struct device *dev, int flags)
 {
-	int index = uart_dev_index(dev);
+	struct uart_device *uart_dev = dev->pri_data;
 
-	if (index < 0)
-		return;
+	if (!uart_dev->initialized)
+		return -EINVAL;
 
-	if (!uart_devices[index])
-		return;
-	uart_deinit(dev);
-	uart_devices[index] = NULL;
+	if (uart_dev->opened)
+		return -EBUSY;
+	uart_dev->opened = true;
+	dev->flags = flags;
+	uart_dev_enable(uart_dev);
+
+	return 0;
+}
+
+static int uart_close(struct device *dev)
+{
+	struct uart_device *uart_dev = dev->pri_data;
+
+	uart_dev->opened = false;
+	dev->flags = 0;
+	uart_dev_disable(uart_dev);
+
+	return 0;
 
 }
+
+static int uart_read(struct device *dev, void *buf, int count)
+{
+	struct uart_device *uart_dev = dev->pri_data;
+	return uart_recv(uart_dev, (uint8_t *)buf, count);
+}
+
+static int uart_write(struct device *dev, const void *buf, int count)
+{
+	struct uart_device *uart_dev = dev->pri_data;
+	return uart_send(uart_dev, (const uint8_t *)buf, count);
+}
+
+static struct dev_ops uart_ops = {
+	.read = uart_read,
+	.write = uart_write,
+	.open = uart_open,
+	.close = uart_close,
+	.init = uart_init,
+};
 
 /* Configurations for UART0 */
 static const PINMUX_GRP_T uart0_pinctrls[] = {
@@ -413,6 +440,10 @@ static const PINMUX_GRP_T uart0_pinctrls[] = {
 };
 
 struct uart_device uart0 = {
+	.dev = {
+		.name = "/uart0",
+		.ops = &uart_ops,
+	},
 	.baudrate = 115200,
 	.word_length = WORD_LENGTH_8BITS,
 	.stop_bits = ONE_STOP_BIT,

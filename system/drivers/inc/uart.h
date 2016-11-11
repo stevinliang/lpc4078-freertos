@@ -9,6 +9,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "queue.h"
+#include "device.h"
 #include "chip.h"
 
 #define ONE_STOP_BIT   1
@@ -26,6 +27,7 @@
 #define PARITY_FORCE_ZERO   4
 
 struct uart_device {
+	struct device dev;
 	uint32_t baudrate;
 	uint8_t word_length;
 	uint8_t stop_bits;
@@ -40,15 +42,11 @@ struct uart_device {
 	IRQn_Type irq;
 	uint32_t irq_prior;
 	bool initialized;
+	bool opened;
 };
 
-int32_t uart_send(struct uart_device *dev, uint8_t *buf, int32_t len);
-int32_t uart_recv(struct uart_device *dev, uint8_t *buf, int32_t len);
 
 int uart_device_register(struct uart_device *dev);
-void uart_device_unregister(struct uart_device *dev);
 void uart_init_all(void);
-
-extern struct uart_device uart0;
 
 #endif /* ifndef _UART_H_ */
