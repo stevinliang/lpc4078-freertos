@@ -10,4 +10,9 @@
 /* get array size */
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
+#define EINVAL   1
+#define EBUSY    2
+#define EEXIST   3
+#define EAGAIN   4
+
 #endif /* ifndef _BASE_H */
