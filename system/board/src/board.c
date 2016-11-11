@@ -33,6 +33,8 @@
 #include "board_api.h"
 #include "string.h"
 #include "retarget.h"
+#include "device.h"
+#include "posix.h"
 
 /*****************************************************************************
  * Private types/enumerations/variables
@@ -529,6 +531,9 @@ void Board_Init(void)
 {
 	/* Sets up retarget */
 	retarget_init();
+	init_device_subsystem();
+	register_all_devices();
+	init_posix_subsystem();
 
 	/* Initializes GPIO */
 	Chip_GPIO_Init(LPC_GPIO);
