@@ -43,13 +43,15 @@ static int get_free_fd(void)
 
 /**
  * open - open a device that registered to the system.
- * @pathname: the name of the device with prefix of '/', such as "/uart0",
- *		"/spi0"
- * @flags: O_NOBLOCK, O_RDONLY, O_WRONLY, O_RDWR could be used. This args do not
- *	   effect any thing. This arg is just to compatible with posix
- *	   interface.
+ * @pathname: the name of the device with prefix of '/',
+ *	   such as "/uart0", "/spi0"
+ * @flags: O_NOBLOCK, O_RDONLY, O_WRONLY, O_RDWR could be used.
+ *         This args do not effect any thing. This arg is just
+ *         to compatible with posix interface.
  * @mode: NOT USED.
- *         return a nonegtive integer if success, negtive integer if failed.
+ *
+ *         This function return a nonegtive integer if success,
+ *         negtive integer if failed.
  *         The returned nonegtive integer is the file descriptor.
  */
 int open(const char *pathname, ...)
@@ -110,6 +112,12 @@ int close(int fd)
 	return 0;
 }
 
+/**
+ * read - read data from fd.
+ * @fd: file descriptor returned by open().
+ * @buf: store data read out from fd.
+ * @count: bytes will be read.
+ */
 int read(int fd, void *buf, int count)
 {
 	struct device *dev;
@@ -122,6 +130,12 @@ int read(int fd, void *buf, int count)
 	return -EINVAL;
 }
 
+/**
+ * write- write data to fd.
+ * @fd: file descriptor returned by open().
+ * @buf: data write to fd.
+ * @count: bytes will be written.
+ */
 int write(int fd, const void *buf, int count)
 {
 	struct device *dev;
@@ -134,24 +148,31 @@ int write(int fd, const void *buf, int count)
 	return -EINVAL;
 }
 
+/**
+ * init_posix_subsystem - init posix subsystem. called in board init procedure.
+ */
 void init_posix_subsystem(void)
 {
 	memset(sys_fds, 0, ARRAY_SIZE(sys_fds));
 
+	/* standard input */
 	sys_fds[0].dev = get_device_by_name(STD_IN_DEV);
 	sys_fds[0].in_use = true;
-
 	if (sys_fds[0].dev)
 		sys_fds[0].dev->ops->open(sys_fds[0].dev, 0);
 
+	/* standard output */
 	sys_fds[1].dev = get_device_by_name(STD_OUT_DEV);
 	sys_fds[1].in_use = true;
 	if (sys_fds[1].dev)
 		sys_fds[1].dev->ops->open(sys_fds[1].dev, 0);
 
+	/* standard error */
 	sys_fds[2].dev = get_device_by_name(STD_ERR_DEV);
 	sys_fds[2].in_use = true;
 	if (sys_fds[2].dev)
 		sys_fds[2].dev->ops->open(sys_fds[2].dev, 0);
 }
+
+/* End of posix.c */
 
