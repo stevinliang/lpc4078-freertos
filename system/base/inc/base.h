@@ -7,12 +7,10 @@
 
 #ifndef _BASE_H
 #define _BASE_H
+#include "FreeRTOS.h"
+#include "errno.h"
 /* get array size */
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
-
-#define EINVAL   1
-#define EBUSY    2
-#define EEXIST   3
-#define EAGAIN   4
+#define ARRAY_SIZE(x)	(sizeof(x) / sizeof(x[0]))
+#define ASSERT(x)	configASSERT(x)
 
 #endif /* ifndef _BASE_H */
