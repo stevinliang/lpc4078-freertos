@@ -10,6 +10,7 @@
 #include "task.h"
 #include <string.h>
 #include "uart.h"
+#include "spi_slave.h"
 #define MAX_DEVICES_SUPPORT 100
 /* Keep all registerd devices */
 static struct device *sys_devices[MAX_DEVICES_SUPPORT];
@@ -35,6 +36,7 @@ struct device *get_device_by_name(const char *name)
 int register_device(struct device *dev)
 {
 	int i;
+	int ret = 0;
 
 	if (!dev)
 		return -EINVAL;
@@ -45,21 +47,21 @@ int register_device(struct device *dev)
 		return -EINVAL;
 
 	taskENTER_CRITICAL();
-	if (get_device_by_name(dev->name) != NULL)
-		return -EINVAL;
-
-	for (i = 0; i < MAX_DEVICES_SUPPORT; i++) {
-		if (sys_devices[i] == NULL) {
-			sys_devices[i] = dev;
-			if (dev->ops->init)
-				dev->ops->init(dev);
-			taskENTER_CRITICAL();
-			return 0;
+	if (get_device_by_name(dev->name) != NULL) {
+		ret = -EINVAL;
+	} else {
+		for (i = 0; i < MAX_DEVICES_SUPPORT; i++) {
+			if (sys_devices[i] == NULL) {
+				sys_devices[i] = dev;
+				if (dev->ops->init)
+					ret = dev->ops->init(dev);
+				break;
+			}
 		}
 	}
 
 	taskENTER_CRITICAL();
-	return -EINVAL;
+	return ret;
 }
 
 int init_device_subsystem()
@@ -72,6 +74,7 @@ int init_device_subsystem()
 void register_all_devices()
 {
 	uart_init_all();
+	spi_init_all();
 }
 
 /* End of device.c */
