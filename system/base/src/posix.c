@@ -71,7 +71,7 @@ int open(const char *pathname, ...)
 	dev = get_device_by_name(pathname);
 
 	if (dev == NULL) {
-		ret = -EEXIST;
+		ret = -ENODEV;
 	} else {
 
 		if (dev->ops->open)
@@ -127,7 +127,7 @@ int read(int fd, void *buf, int count)
 	if (dev && dev->ops->read)
 		return dev->ops->read(dev, buf, count);
 
-	return -EINVAL;
+	return -EIO;
 }
 
 /**
@@ -145,7 +145,7 @@ int write(int fd, const void *buf, int count)
 	if (dev && dev->ops->read)
 		return dev->ops->write(dev, buf, count);
 
-	return -EINVAL;
+	return -EIO;
 }
 
 /**
