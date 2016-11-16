@@ -44,6 +44,7 @@ struct spi_device {
 	struct dma_chan dma_tx_chan;
 	const PINMUX_GRP_T *pinctrls;
 	uint32_t pins;
+	uint32_t int_pin;
 	LPC_SSP_T *reg_base;
 	SemaphoreHandle_t mutex;
 	bool initialized;

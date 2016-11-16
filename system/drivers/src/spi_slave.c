@@ -11,6 +11,7 @@
 #include "spi_slave.h"
 #include "task.h"
 #include "base.h"
+#include "gpiolib.h"
 
 #define SPI_PORT_NUM 3
 #define SPI_MAX_TRANSFER_LEN 256
@@ -284,6 +285,7 @@ static int spi_init(struct device *dev)
 	struct spi_device *spidev = (struct spi_device *)dev->pri_data;
 
 	ret = spi_device_init(spidev);
+	gpio_direction_output(spidev->int_pin, 1);
 	if (ret)
 		return ret;
 
@@ -340,6 +342,8 @@ static int spi_write(struct device *dev, const void *buf, int len)
 	int once_xfered;
 
 	if (xSemaphoreTake(spidev->mutex, portMAX_DELAY) == pdTRUE) {
+		/* Tell spi master to read data */
+		gpio_set_value(spidev->int_pin, 0);
 		while (remain_bytes) {
 			xfer.len = remain_bytes > SPI_MAX_TRANSFER_LEN
 				? SPI_MAX_TRANSFER_LEN
@@ -356,6 +360,7 @@ static int spi_write(struct device *dev, const void *buf, int len)
 			}
 			remain_bytes -= xfer.len;
 		}
+		gpio_set_value(spidev->int_pin, 1);
 
 		xSemaphoreGive(spidev->mutex);
 	}
@@ -402,11 +407,23 @@ static struct dev_ops spi_ops = {
 	.init = spi_init,
 };
 
+static const PINMUX_GRP_T spi0_pinctrls[] = {
+	{0, 15, (IOCON_FUNC2 | IOCON_MODE_INACT)}, /* SSP0_SCK */
+	{0, 16, (IOCON_FUNC2 | IOCON_MODE_INACT)}, /* SSP0_SSEL */
+	{0, 17, (IOCON_FUNC2 | IOCON_MODE_INACT)}, /* SSP0_MISO */
+	{0, 18, (IOCON_FUNC2 | IOCON_MODE_INACT)}, /* SSP0_MOSI */
+	{0, 19, (IOCON_FUNC0 | IOCON_MODE_PULLUP)}, /* INT */
+};
+
 static struct spi_device spi0 = {
 	.dev = {
 		.name = "/spi0",
 		.ops = &spi_ops,
 	},
+	.bits_per_word = SPI_BITS_8,
+	.clk_mode = SPI_CLK_MODE0,
+	.pinctrls = &spi0_pinctrls,
+	.pins = ARRAY_SIZE(spi0_pinctrls),
 	.dma_tx_chan = {
 		.dst_addr = GPDMA_CONN_SSP0_Tx,
 		.direction = DMA_MEMORY_TO_PERIPHERAL,
